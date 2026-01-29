@@ -15,15 +15,35 @@ def load_data():
         # Connect using Databricks SDK (handles OAuth automatically)
         w = WorkspaceClient()
         
+        # First, let's check what catalogs and tables are available
+        st.info("Checking available tables...")
+        
+        # Try to list available tables in samples catalog
+        try:
+            catalog_check = w.statement_execution.execute_statement(
+                warehouse_id=WAREHOUSE_ID,
+                statement="SHOW TABLES IN samples.tpch",
+                wait_timeout="30s"
+            )
+            
+            if catalog_check.result and catalog_check.result.data_array:
+                st.success("✅ Found tables in samples.tpch")
+                st.write("Available tables:", catalog_check.result.data_array[:10])  # Show first 10
+        except:
+            st.warning("Cannot access samples.tpch catalog")
+        
+        # Use a table that definitely exists - the orders table (not aggregated)
         query = """
         SELECT
-            order_date,
-            daily_total
-        FROM samples.tpch.orders_by_day
-        ORDER BY order_date
+            o_orderdate as order_date,
+            SUM(o_totalprice) as daily_total
+        FROM samples.tpch.orders
+        GROUP BY o_orderdate
+        ORDER BY o_orderdate
+        LIMIT 1000
         """
         
-        st.info(f"Executing query...")
+        st.info(f"Executing query on samples.tpch.orders...")
         
         # Execute the query
         result = w.statement_execution.execute_statement(
@@ -53,7 +73,6 @@ def load_data():
             return df
         else:
             st.error("No data returned from query")
-            st.write("Result object:", result)
             return pd.DataFrame()
             
     except Exception as e:
@@ -76,8 +95,8 @@ if not df.empty:
     )
     
     # Show the data table for debugging
-    with st.expander("View raw data"):
-        st.dataframe(df)
+    with st.expander("View raw data (first 20 rows)"):
+        st.dataframe(df.head(20))
     
     # 🎉 Celebrate when crossing a threshold interactively
     threshold = st.slider(
@@ -91,25 +110,4 @@ if not df.empty:
         st.success("🚀 Threshold reached!")
         st.balloons()
 else:
-    st.warning("No data available to display")
-    
-    # Try a simpler query to test connection
-    st.write("---")
-    st.write("Testing connection with a simple query...")
-    
-    try:
-        w = WorkspaceClient()
-        test_result = w.statement_execution.execute_statement(
-            warehouse_id=WAREHOUSE_ID,
-            statement="SELECT 1 as test, current_user() as user",
-            wait_timeout="30s"
-        )
-        
-        if test_result.result and test_result.result.data_array:
-            st.success("✅ Connection works! Issue is with the data query.")
-            st.write("Test result:", test_result.result.data_array)
-        else:
-            st.error("❌ Connection test failed")
-            
-    except Exception as e:
-        st.error(f"Connection test error: {str(e)}")
+    st.warning("⚠️ No data available to display")
