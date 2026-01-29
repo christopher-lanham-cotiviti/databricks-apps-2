@@ -7,7 +7,7 @@ st.title("📊 Orders Over Time (Databricks App Demo)")
 
 # --- CONFIG: from SQL Warehouse → Connection details ---
 SERVER_HOSTNAME = "dbc-0fa270fd-fb38.cloud.databricks.com"
-HTTP_PATH = "/sql/1.0/warehouses/f29bee003b134bcc"
+HTTP_PATH = "/sql/1.0/warehouses/a3008045957bf8cf"
 
 @st.cache_data
 def load_data():
