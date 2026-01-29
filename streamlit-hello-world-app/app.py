@@ -1,5 +1,16 @@
 import streamlit as st
 import pandas as pd
+
+from streamlit.components.v1 import html
+
+def confetti():
+    html("""
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    </script>
+    """, height=0)
+
 st.set_page_config(layout="wide")
  
 st.header("Hello world!!!")
@@ -20,6 +31,6 @@ st.bar_chart(
 )
 
 # 🎉 Celebrate when we cross a threshold
-if chart_data["y"].max() >= 500_000_000:
+if chart_data["y"].max() >= 100_000_000:
     st.success("🚀 Goal reached!")
-    st.snow()
+    confetti()
