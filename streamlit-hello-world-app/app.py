@@ -24,9 +24,9 @@ st.caption(
 @st.cache_data
 def load_data():
     return pd.read_csv(
-        "streamlit-hello-world-app/orders_over_time.csv",
-        parse_dates=["order_date"]
-    )
+    "orders_over_time.csv",
+    parse_dates=["order_date"]
+)
 
 df = load_data()
 
