@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from databricks.sdk import WorkspaceClient
+import plotly.express as px
 
 st.set_page_config(layout="wide")
 st.title("📊 Orders Over Time")
@@ -66,14 +67,19 @@ if not df.empty:
         format="$%d"
     )
     
-    # Line chart with y-axis range set to $400M-$500M
-    chart = st.line_chart(
+    # Create line chart with Plotly for better control
+    fig = px.line(
         df,
         x="order_date",
         y="daily_total",
-        height=400,
-        y_axis_config={"min": 400_000_000, "max": 500_000_000}
+        labels={"order_date": "Order Date", "daily_total": "Daily Total"}
     )
+    
+    # Set y-axis range to $400M-$500M
+    fig.update_yaxes(range=[400_000_000, 500_000_000])
+    fig.update_layout(height=400, showlegend=False)
+    
+    st.plotly_chart(fig, use_container_width=True)
     
     # Progress bar showing how close SLIDER is to the FIXED $450M GOAL
     progress = min(slider_value / FIXED_GOAL, 1.0)
