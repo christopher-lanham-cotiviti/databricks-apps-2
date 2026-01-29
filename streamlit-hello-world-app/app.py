@@ -30,7 +30,7 @@ df = load_data()
 # -------------------------
 # Slider to scale data
 # -------------------------
-threshold = 1_000_000
+threshold = 20_000
 
 scale = st.slider(
     "Scale order volume",
@@ -76,7 +76,7 @@ else:
         st.session_state.prev_max < threshold
         and current_max >= threshold
     ):
-        st.success("🚀 Orders crossed 1 million!")
+        st.success("🚀 Orders crossed 20k!")
         st.balloons()
 
     st.session_state.prev_max = current_max
