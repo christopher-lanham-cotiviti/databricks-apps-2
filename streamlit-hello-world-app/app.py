@@ -1,50 +1,39 @@
 import streamlit as st
 import pandas as pd
-from databricks import sql
-import os
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.core import Config
 
 st.set_page_config(layout="wide")
 st.title("🔎 Databricks SQL Debug App")
-
-SERVER_HOSTNAME = "dbc-0fa270fd-fb38.cloud.databricks.com"
-HTTP_PATH = "/sql/1.0/warehouses/a3008045957bf8cf"
 
 st.write("Starting app…")
 st.write("🔐 Using Databricks App OAuth")
 
 try:
-    # Databricks Apps provide authentication automatically
-    # Use the environment token or OAuth flow
-    access_token = os.environ.get("DATABRICKS_TOKEN")
+    # Use Databricks SDK - it handles OAuth automatically for Databricks Apps
+    w = WorkspaceClient()
     
-    if not access_token:
-        st.warning("No token found, trying OAuth flow...")
-        # For Databricks Apps with OAuth enabled
-        with sql.connect(
-            server_hostname=SERVER_HOSTNAME,
-            http_path=HTTP_PATH,
-            auth_type="databricks-oauth"
-        ) as conn:
-            st.success("✅ Connected via OAuth")
-            cursor = conn.cursor()
-            cursor.execute("SELECT current_user() AS user, current_database() AS db")
-            result = cursor.fetchall()
-            st.write(result)
+    st.success("✅ Connected via Databricks SDK")
+    
+    # Now query your SQL warehouse
+    st.write("▶ Running test query…")
+    
+    # Execute SQL query
+    result = w.statement_execution.execute_statement(
+        warehouse_id="a3008045957bf8cf",
+        statement="SELECT current_user() AS user, current_database() AS db, current_timestamp() AS time",
+        wait_timeout="30s"
+    )
+    
+    # Display results
+    if result.result and result.result.data_array:
+        columns = [col.name for col in result.manifest.schema.columns]
+        data = result.result.data_array
+        df = pd.DataFrame(data, columns=columns)
+        st.dataframe(df)
     else:
-        # Use the provided token
-        with sql.connect(
-            server_hostname=SERVER_HOSTNAME,
-            http_path=HTTP_PATH,
-            access_token=access_token
-        ) as conn:
-            st.success("✅ Connected via App Token")
-            cursor = conn.cursor()
-            cursor.execute("SELECT current_user() AS user, current_database() AS db")
-            result = cursor.fetchall()
-            st.write(result)
-        
+        st.write("Query executed but no data returned")
+    
 except Exception as e:
-    st.error("❌ SQL connection failed")
+    st.error("❌ Connection failed")
     st.exception(e)
-    st.write("Available environment variables:")
-    st.write([key for key in os.environ.keys() if 'DATABRICKS' in key or 'TOKEN' in key])
