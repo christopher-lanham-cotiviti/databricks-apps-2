@@ -1,39 +1,80 @@
 import streamlit as st
 import pandas as pd
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.core import Config
 
 st.set_page_config(layout="wide")
-st.title("🔎 Databricks SQL Debug App")
+st.title("📊 Orders Over Time (Databricks App Demo)")
 
-st.write("Starting app…")
-st.write("🔐 Using Databricks App OAuth")
+# --- CONFIG: SQL Warehouse ID ---
+WAREHOUSE_ID = "a3008045957bf8cf"
 
-try:
-    # Use Databricks SDK - it handles OAuth automatically for Databricks Apps
-    w = WorkspaceClient()
-    
-    st.success("✅ Connected via Databricks SDK")
-    
-    # Now query your SQL warehouse
-    st.write("▶ Running test query…")
-    
-    # Execute SQL query
-    result = w.statement_execution.execute_statement(
-        warehouse_id="a3008045957bf8cf",
-        statement="SELECT current_user() AS user, current_database() AS db, current_timestamp() AS time",
-        wait_timeout="30s"
+@st.cache_data
+def load_data():
+    """Load orders data from Databricks Unity Catalog"""
+    try:
+        # Connect using Databricks SDK (handles OAuth automatically)
+        w = WorkspaceClient()
+        
+        query = """
+        SELECT
+            order_date,
+            daily_total
+        FROM samples.tpch.orders_by_day
+        ORDER BY order_date
+        """
+        
+        # Execute the query
+        result = w.statement_execution.execute_statement(
+            warehouse_id=WAREHOUSE_ID,
+            statement=query,
+            wait_timeout="50s"
+        )
+        
+        # Convert results to DataFrame
+        if result.result and result.result.data_array:
+            columns = [col.name for col in result.manifest.schema.columns]
+            data = result.result.data_array
+            df = pd.DataFrame(data, columns=columns)
+            
+            # Convert order_date to datetime if it's a string
+            if 'order_date' in df.columns:
+                df['order_date'] = pd.to_datetime(df['order_date'])
+            
+            # Convert daily_total to numeric
+            if 'daily_total' in df.columns:
+                df['daily_total'] = pd.to_numeric(df['daily_total'])
+            
+            return df
+        else:
+            st.error("No data returned from query")
+            return pd.DataFrame()
+            
+    except Exception as e:
+        st.error(f"Failed to load data: {str(e)}")
+        st.exception(e)
+        return pd.DataFrame()
+
+# Load the data
+df = load_data()
+
+# Display the chart if we have data
+if not df.empty:
+    st.line_chart(
+        df,
+        x="order_date",
+        y="daily_total"
     )
     
-    # Display results
-    if result.result and result.result.data_array:
-        columns = [col.name for col in result.manifest.schema.columns]
-        data = result.result.data_array
-        df = pd.DataFrame(data, columns=columns)
-        st.dataframe(df)
-    else:
-        st.write("Query executed but no data returned")
+    # 🎉 Celebrate when crossing a threshold interactively
+    threshold = st.slider(
+        "Celebrate when daily total exceeds:",
+        min_value=0,
+        max_value=int(df["daily_total"].max()),
+        value=int(df["daily_total"].max() * 0.75)
+    )
     
-except Exception as e:
-    st.error("❌ Connection failed")
-    st.exception(e)
+    if df["daily_total"].max() >= threshold:
+        st.success("🚀 Threshold reached!")
+        st.balloons()
+else:
+    st.warning("No data available to display")
