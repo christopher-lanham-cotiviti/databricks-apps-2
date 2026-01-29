@@ -56,11 +56,12 @@ if not df.empty:
     max_rounded = int((max_value // 10_000_000 + 1) * 10_000_000)
     
     # Slider for threshold with clean 10 million intervals
+    # Start at $200M, balloons fire when reaching $300M
     threshold = st.slider(
         "Set celebration threshold:",
         min_value=0,
         max_value=max_rounded,
-        value=int(max_rounded * 0.75),
+        value=200_000_000,  # Start at $200M
         step=10_000_000,  # 10 million increments
         format="$%d"
     )
