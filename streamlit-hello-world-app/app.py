@@ -76,7 +76,7 @@ else:
         st.session_state.prev_max < threshold
         and current_max >= threshold
     ):
-        st.success("🚀 Orders crossed 20k!")
-        st.balloons()
+        # st.success("🚀 Orders crossed 20k!")
+        st.toast("🚀 Orders crossed 20k!", icon="🎉")
 
     st.session_state.prev_max = current_max
