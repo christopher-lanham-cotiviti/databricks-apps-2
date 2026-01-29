@@ -30,6 +30,31 @@ def load_data():
 
 df = load_data()
 
+# Slider to simulate scale / growth
+threshold = 1_000_000
+scale = st.slider(
+    "Scale orders",
+    min_value=1,
+    max_value=20,
+    value=1
+)
+
+# Apply scale
+df_scaled = df.copy()
+df_scaled["daily_total"] = df_scaled["daily_total"] * scale
+
+# Track previous max value
+prev_max = st.session_state.get("prev_max", 0)
+current_max = df_scaled["daily_total"].max()
+
+# Fire celebration ONLY when crossing the threshold upward
+if prev_max < threshold and current_max >= threshold:
+    st.success("🚀 Orders crossed 1M!")
+    st.balloons()
+
+# Save for next rerun
+st.session_state["prev_max"] = current_max
+
 # ----------------------------
 # Controls
 # ----------------------------
@@ -74,7 +99,7 @@ col3.metric(
 st.subheader("Revenue Trend")
 
 st.line_chart(
-    filtered_df,
+    df_scaled,
     x="order_date",
     y="daily_total",
     height=450
