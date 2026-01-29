@@ -8,6 +8,9 @@ st.title("📊 Orders Over Time")
 # --- CONFIG: SQL Warehouse ID ---
 WAREHOUSE_ID = "a3008045957bf8cf"
 
+# Set the celebration threshold
+CELEBRATION_THRESHOLD = 300_000_000  # $300M
+
 @st.cache_data
 def load_data():
     """Load orders data from Databricks Unity Catalog"""
@@ -42,9 +45,11 @@ def load_data():
     else:
         return pd.DataFrame()
 
-# Initialize session state to track if threshold was previously met
-if 'previous_threshold_met' not in st.session_state:
-    st.session_state.previous_threshold_met = False
+# Initialize session state to track previous slider value
+if 'previous_slider_value' not in st.session_state:
+    st.session_state.previous_slider_value = 200_000_000  # Initial value
+if 'balloons_fired' not in st.session_state:
+    st.session_state.balloons_fired = False
 
 # Load the data
 with st.spinner("Loading data from Databricks..."):
@@ -55,14 +60,13 @@ if not df.empty:
     max_value = df["daily_total"].max()
     max_rounded = int((max_value // 10_000_000 + 1) * 10_000_000)
     
-    # Slider for threshold with clean 10 million intervals
-    # Default value is $300M - balloons fire when user slides it below peak
-    threshold = st.slider(
-        "Set celebration threshold:",
+    # Slider starts at $200M
+    slider_value = st.slider(
+        "Adjust threshold to celebrate:",
         min_value=0,
         max_value=max_rounded,
-        value=300_000_000,  # START at $300M
-        step=10_000_000,  # 10 million increments
+        value=200_000_000,  # Slider starts at $200M
+        step=10_000_000,
         format="$%d"
     )
     
@@ -74,30 +78,38 @@ if not df.empty:
         height=400
     )
     
-    # Progress bar showing how close we are to threshold
-    current_max = df["daily_total"].max()
-    progress = min(current_max / threshold, 1.0) if threshold > 0 else 1.0
+    # Progress bar showing progress toward the threshold
+    peak_value = df["daily_total"].max()
+    progress = min(peak_value / slider_value, 1.0) if slider_value > 0 else 1.0
     
     st.progress(progress)
     
     # Format numbers in millions for readability
-    peak_millions = current_max / 1_000_000
-    goal_millions = threshold / 1_000_000
+    peak_millions = peak_value / 1_000_000
+    slider_millions = slider_value / 1_000_000
     
-    st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${goal_millions:.1f}M")
+    st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${slider_millions:.1f}M")
     
-    # Check if threshold is currently met
-    threshold_currently_met = current_max >= threshold
+    # Check if slider just crossed the $300M threshold
+    crossed_threshold = (
+        st.session_state.previous_slider_value < CELEBRATION_THRESHOLD 
+        and slider_value >= CELEBRATION_THRESHOLD
+    )
     
-    # 🎉 Celebrate only when crossing from not met to met
-    if threshold_currently_met and not st.session_state.previous_threshold_met:
+    # 🎉 Fire balloons when crossing $300M threshold
+    if crossed_threshold and not st.session_state.balloons_fired:
         st.success("🚀 Threshold reached!")
         st.balloons()
-    elif threshold_currently_met:
+        st.session_state.balloons_fired = True
+    elif slider_value >= CELEBRATION_THRESHOLD and st.session_state.balloons_fired:
         st.success("🚀 Threshold reached!")
     
-    # Update session state for next interaction
-    st.session_state.previous_threshold_met = threshold_currently_met
+    # Reset balloons_fired if we go back below threshold
+    if slider_value < CELEBRATION_THRESHOLD:
+        st.session_state.balloons_fired = False
+    
+    # Update previous slider value
+    st.session_state.previous_slider_value = slider_value
     
 else:
     st.error("Unable to load data from Databricks")
