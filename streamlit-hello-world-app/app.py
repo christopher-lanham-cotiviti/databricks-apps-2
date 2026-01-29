@@ -78,17 +78,16 @@ if not df.empty:
         height=400
     )
     
-    # Progress bar showing progress toward the FIXED $300M GOAL
-    peak_value = df["daily_total"].max()
-    progress = min(peak_value / FIXED_GOAL, 1.0)
+    # Progress bar showing how close SLIDER is to the FIXED $300M GOAL
+    progress = min(slider_value / FIXED_GOAL, 1.0)
     
     st.progress(progress)
     
     # Format numbers in millions for readability
-    peak_millions = peak_value / 1_000_000
+    slider_millions = slider_value / 1_000_000
     goal_millions = FIXED_GOAL / 1_000_000  # Always shows $300M
     
-    st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${goal_millions:.1f}M")
+    st.caption(f"Current: ${slider_millions:.1f}M / Goal: ${goal_millions:.1f}M")
     
     # Check if slider just crossed the $300M threshold
     crossed_threshold = (
@@ -98,11 +97,11 @@ if not df.empty:
     
     # 🎉 Fire balloons when crossing $300M threshold
     if crossed_threshold and not st.session_state.balloons_fired:
-        st.success("🚀 Threshold reached!")
+        st.success("🚀 Goal reached!")
         st.balloons()
         st.session_state.balloons_fired = True
     elif slider_value >= FIXED_GOAL and st.session_state.balloons_fired:
-        st.success("🚀 Threshold reached!")
+        st.success("🚀 Goal reached!")
     
     # Reset balloons_fired if we go back below threshold
     if slider_value < FIXED_GOAL:
