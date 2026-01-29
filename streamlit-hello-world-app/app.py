@@ -47,13 +47,17 @@ with st.spinner("Loading data from Databricks..."):
     df = load_data()
 
 if not df.empty:
-    # Slider for threshold
-    max_value = int(df["daily_total"].max())
+    # Calculate max and round to nearest 10 million for clean intervals
+    max_value = df["daily_total"].max()
+    max_rounded = int((max_value // 10_000_000 + 1) * 10_000_000)
+    
+    # Slider for threshold with clean 10 million intervals
     threshold = st.slider(
         "Set celebration threshold:",
         min_value=0,
-        max_value=max_value,
-        value=int(max_value * 0.75),
+        max_value=max_rounded,
+        value=int(max_rounded * 0.75),
+        step=10_000_000,  # 10 million increments
         format="$%d"
     )
     
@@ -70,7 +74,12 @@ if not df.empty:
     progress = min(current_max / threshold, 1.0) if threshold > 0 else 1.0
     
     st.progress(progress)
-    st.caption(f"Peak: ${current_max:,.0f} / Goal: ${threshold:,.0f}")
+    
+    # Format numbers in millions for readability
+    peak_millions = current_max / 1_000_000
+    goal_millions = threshold / 1_000_000
+    
+    st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${goal_millions:.1f}M")
     
     # 🎉 Celebrate when threshold is reached
     if current_max >= threshold:
