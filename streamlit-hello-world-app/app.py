@@ -21,6 +21,6 @@ st.bar_chart(
 )
 
 # 🎉 Celebrate when we cross a threshold
-if chart_data["y"].max() >= 100_000_000:
+if apps >= 28:
     st.success("🚀 Goal reached!")
     st.balloons()
