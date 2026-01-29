@@ -42,6 +42,10 @@ def load_data():
     else:
         return pd.DataFrame()
 
+# Initialize session state to track if threshold was previously met
+if 'previous_threshold_met' not in st.session_state:
+    st.session_state.previous_threshold_met = False
+
 # Load the data
 with st.spinner("Loading data from Databricks..."):
     df = load_data()
@@ -81,10 +85,18 @@ if not df.empty:
     
     st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${goal_millions:.1f}M")
     
-    # 🎉 Celebrate when threshold is reached
-    if current_max >= threshold:
+    # Check if threshold is currently met
+    threshold_currently_met = current_max >= threshold
+    
+    # 🎉 Celebrate only when crossing from not met to met
+    if threshold_currently_met and not st.session_state.previous_threshold_met:
         st.success("🚀 Threshold reached!")
         st.balloons()
+    elif threshold_currently_met:
+        st.success("🚀 Threshold reached!")
+    
+    # Update session state for next interaction
+    st.session_state.previous_threshold_met = threshold_currently_met
     
 else:
     st.error("Unable to load data from Databricks")
