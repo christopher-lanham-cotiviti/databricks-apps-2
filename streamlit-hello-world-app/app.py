@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from databricks import sql
+import time
 
 st.set_page_config(layout="wide")
 st.title("🔎 Databricks SQL Debug App (OAuth)")
@@ -12,47 +13,25 @@ TIMEOUT_SECONDS = 30
 st.write("Starting app…")
 st.write("🔐 Using Databricks OAuth (App Authorization)")
 
-try:
-    st.write("🔌 Attempting SQL connection…")
+st.write("⏱ Preparing SQL connection…")
 
+start = time.time()
+
+try:
     with sql.connect(
         server_hostname=SERVER_HOSTNAME,
         http_path=HTTP_PATH,
         auth_type="databricks-oauth",
-        timeout=TIMEOUT_SECONDS,
+        timeout=15,   # 🔥 IMPORTANT
     ) as conn:
 
-        st.success("✅ Connected to SQL Warehouse")
+        st.success(f"✅ Connected in {round(time.time() - start, 2)}s")
 
         cursor = conn.cursor()
-
-        st.write("▶ Running SELECT 1")
-        cursor.execute("SELECT 1 AS ok")
+        st.write("▶ Running test query…")
+        cursor.execute("SELECT 1")
         st.write(cursor.fetchall())
-
-        st.write("▶ Identity check")
-        cursor.execute("""
-            SELECT
-              current_user(),
-              current_catalog(),
-              current_schema()
-        """)
-        st.write(cursor.fetchall())
-
-        st.write("▶ Running sample query")
-        df = pd.read_sql("""
-            SELECT
-              date_trunc('day', o_orderdate) AS order_date,
-              COUNT(*) AS order_count
-            FROM samples.tpch.orders
-            GROUP BY 1
-            ORDER BY 1
-            LIMIT 30
-        """, conn)
-
-        st.success("🎉 Query successful")
-        st.dataframe(df)
 
 except Exception as e:
-    st.error("🔥 SQL ERROR")
+    st.error("❌ SQL connection failed")
     st.exception(e)
