@@ -9,16 +9,14 @@ st.set_page_config(layout="wide")
 st.title("📊 Orders Over Time (Databricks App Demo)")
 
 # -----------------------------
-# Databricks client
+# Databricks client (auto-auth)
 # -----------------------------
-# Auth is automatic via the App's Service Principal
 w = WorkspaceClient()
 
 # -----------------------------
-# Choose a SQL Warehouse
+# Find a running SQL Warehouse
 # -----------------------------
-# Easiest safe approach: pick the first RUNNING warehouse
-warehouses = list(w.sql.warehouses.list())
+warehouses = list(w.warehouses.list())
 
 running_wh = next(
     (wh for wh in warehouses if wh.state == "RUNNING"),
@@ -33,7 +31,7 @@ warehouse_id = running_wh.id
 st.caption(f"Using warehouse: **{running_wh.name}**")
 
 # -----------------------------
-# SQL query (Unity Catalog-safe)
+# SQL query
 # -----------------------------
 QUERY = """
 SELECT
@@ -48,14 +46,18 @@ ORDER BY 1
 # Execute query
 # -----------------------------
 with st.spinner("Querying Databricks…"):
-    result = w.sql.execute_statement(
+    response = w.statement_execution.execute_statement(
         warehouse_id=warehouse_id,
         statement=QUERY,
+        wait_timeout="30s",
     )
 
-# Convert to Pandas
-columns = [c.name for c in result.manifest.schema.columns]
-rows = [r.values for r in result.result.data_array]
+# -----------------------------
+# Convert results to Pandas
+# -----------------------------
+columns = [c.name for c in response.manifest.schema.columns]
+rows = [r.values for r in response.result.data_array]
+
 df = pd.DataFrame(rows, columns=columns)
 
 # -----------------------------
@@ -71,12 +73,11 @@ st.line_chart(
 )
 
 # -----------------------------
-# 🎉 Celebration logic
+# 🎉 Celebration trigger
 # -----------------------------
 total_orders = df["order_count"].sum()
-
 st.metric("Total Orders", f"{total_orders:,}")
 
-if total_orders > 10_000:
+if total_orders >= 10_000:
     st.success("🎉 Big milestone reached!")
     st.balloons()
