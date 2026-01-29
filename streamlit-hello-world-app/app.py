@@ -1,26 +1,23 @@
 import streamlit as st
-import pandas as pd
+from pyspark.sql import functions as F
 
 st.set_page_config(layout="wide")
- 
-st.header("Hello world!!!")
+st.header("Orders over time (real Databricks data)")
 
-apps = st.slider("Number of apps", max_value=60, value=10)
-
-chart_data = pd.DataFrame({
-    'y': [2 ** x for x in range(apps)]
-})
-
-st.bar_chart(
-    chart_data,
-    height=500,
-    width=min(100 + 50 * apps, 1000),
-    use_container_width=False,
-    x_label="Apps",
-    y_label="Fun with data"
+# Pull a small, demo-safe slice
+df = (
+    spark.table("samples.tpch.orders")
+    .select("o_orderdate", "o_totalprice")
+    .groupBy("o_orderdate")
+    .agg(F.sum("o_totalprice").alias("daily_total"))
+    .orderBy("o_orderdate")
+    .limit(1000)
 )
 
-# 🎉 Celebrate when we cross a threshold
-if apps >= 28:
-    st.success("🚀 Goal reached!")
-    st.balloons()
+pdf = df.toPandas()
+
+st.line_chart(
+    pdf,
+    x="o_orderdate",
+    y="daily_total"
+)
