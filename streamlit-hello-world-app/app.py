@@ -5,42 +5,41 @@ from databricks import sql
 st.set_page_config(layout="wide")
 st.title("📊 Orders Over Time (Databricks App Demo)")
 
-@st.cache_data(ttl=300)
+# --- CONFIG: from SQL Warehouse → Connection details ---
+SERVER_HOSTNAME = "dbc-0fa270fd-fb38.cloud.databricks.com"
+HTTP_PATH = "/sql/1.0/warehouses/f29bee003b134bcc"
+
+@st.cache_data
 def load_data():
-    # Uses the app's service principal automatically
-    with sql.connect() as conn:
-        df = pd.read_sql("""
-            SELECT
-                date_trunc('day', order_timestamp) AS order_date,
-                COUNT(*) AS order_count
-            FROM samples.tpch.orders
-            GROUP BY 1
-            ORDER BY 1
-        """, conn)
-    return df
+    with sql.connect(
+        server_hostname=SERVER_HOSTNAME,
+        http_path=HTTP_PATH
+    ) as conn:
+        query = """
+        SELECT
+            order_date,
+            daily_total
+        FROM samples.tpch.orders_by_day
+        ORDER BY order_date
+        """
+        return pd.read_sql(query, conn)
 
 df = load_data()
 
-# ---- UI ----
-threshold = st.slider(
-    "Celebration threshold (total orders)",
-    min_value=100,
-    max_value=5000,
-    value=1000,
-    step=100
+st.line_chart(
+    df,
+    x="order_date",
+    y="daily_total"
 )
 
-st.line_chart(df, x="order_date", y="order_count")
+# 🎉 Celebrate when crossing a threshold interactively
+threshold = st.slider(
+    "Celebrate when daily total exceeds:",
+    min_value=0,
+    max_value=int(df["daily_total"].max()),
+    value=int(df["daily_total"].max() * 0.75)
+)
 
-total_orders = df["order_count"].sum()
-
-st.metric("Total orders", f"{total_orders:,}")
-
-# ---- Celebration (correctly gated) ----
-if "celebrated" not in st.session_state:
-    st.session_state.celebrated = False
-
-if total_orders >= threshold and not st.session_state.celebrated:
-    st.toast("🚀 Order milestone reached!", icon="🎉")
-    st.success("Threshold crossed — nice work!")
-    st.session_state.celebrated = True
+if df["daily_total"].max() >= threshold:
+    st.success("🚀 Threshold reached!")
+    st.balloons()
