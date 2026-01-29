@@ -24,7 +24,7 @@ st.caption(
 @st.cache_data
 def load_data():
     return pd.read_csv(
-        "/Workspace/Users/christopher.lanham@cotiviti.com/databricks_apps/hello-world-3_2026_01_29-00_04/streamlit-hello-world-app/orders_over_time.csv",
+        "streamlit-hello-world-app/orders_over_time.csv",
         parse_dates=["order_date"]
     )
 
