@@ -8,8 +8,8 @@ st.title("📊 Orders Over Time")
 # --- CONFIG: SQL Warehouse ID ---
 WAREHOUSE_ID = "a3008045957bf8cf"
 
-# Set the celebration threshold
-CELEBRATION_THRESHOLD = 300_000_000  # $300M
+# Set the FIXED celebration goal
+FIXED_GOAL = 300_000_000  # $300M - this never changes
 
 @st.cache_data
 def load_data():
@@ -78,22 +78,22 @@ if not df.empty:
         height=400
     )
     
-    # Progress bar showing progress toward the threshold
+    # Progress bar showing progress toward the FIXED $300M GOAL
     peak_value = df["daily_total"].max()
-    progress = min(peak_value / slider_value, 1.0) if slider_value > 0 else 1.0
+    progress = min(peak_value / FIXED_GOAL, 1.0)
     
     st.progress(progress)
     
     # Format numbers in millions for readability
     peak_millions = peak_value / 1_000_000
-    slider_millions = slider_value / 1_000_000
+    goal_millions = FIXED_GOAL / 1_000_000  # Always shows $300M
     
-    st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${slider_millions:.1f}M")
+    st.caption(f"Peak: ${peak_millions:.1f}M / Goal: ${goal_millions:.1f}M")
     
     # Check if slider just crossed the $300M threshold
     crossed_threshold = (
-        st.session_state.previous_slider_value < CELEBRATION_THRESHOLD 
-        and slider_value >= CELEBRATION_THRESHOLD
+        st.session_state.previous_slider_value < FIXED_GOAL 
+        and slider_value >= FIXED_GOAL
     )
     
     # 🎉 Fire balloons when crossing $300M threshold
@@ -101,11 +101,11 @@ if not df.empty:
         st.success("🚀 Threshold reached!")
         st.balloons()
         st.session_state.balloons_fired = True
-    elif slider_value >= CELEBRATION_THRESHOLD and st.session_state.balloons_fired:
+    elif slider_value >= FIXED_GOAL and st.session_state.balloons_fired:
         st.success("🚀 Threshold reached!")
     
     # Reset balloons_fired if we go back below threshold
-    if slider_value < CELEBRATION_THRESHOLD:
+    if slider_value < FIXED_GOAL:
         st.session_state.balloons_fired = False
     
     # Update previous slider value
